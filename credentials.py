@@ -7,6 +7,30 @@ import keyring
 
 
 ################################################
+# Edit entries in the Python keyring
+################################################
+def editKeyRingEntries(curvals, newvals):
+
+  i = 0
+  while(True):
+    description = keyring.get_password("cloud-tui", "%s_desc" % i)
+    # Edit if it exists(don't want two entries with the same name)
+    if curvals[0] == description:
+      try:
+        keyring.set_password("cloud-tui", "%s_desc" % i, newvals[0])
+        keyring.set_password("cloud-tui", "%s_tenant" % i, newvals[1])
+        keyring.set_password("cloud-tui", "%s_user" % i, newvals[2])
+        keyring.set_password("cloud-tui", "%s_apikey" % i, newvals[3])
+        #print "stored keyring for service cloud-tui and key %s_desc" % i
+      except keyring.errors.PasswordSetError:
+        print "Could NOT edit keyring for service cloud-tui and key %s_desc" % i
+      break
+    
+    i += 1
+
+  
+
+################################################
 # Use Python keyring to add cloud credentials
 ################################################
 def addKeyRingEntries(curvals):
@@ -14,7 +38,7 @@ def addKeyRingEntries(curvals):
   i = 0
   while(True):
     description = keyring.get_password("cloud-tui", "%s_desc" % i)
-    # Edit if it exists
+    # Edit if it exists(don't want two entries with the same name)
     if curvals[0] == description:
       break
     
@@ -138,6 +162,41 @@ def createCredentialsForm(helpline, title, inptext):
     return status
 
 
+#######################################################
+# Snack form to edit credential info from a user
+#######################################################
+def editCredentialsForm(helpline, title, inptext, curcreds):
+
+  # Set up the main screen 
+  credwin = snack.SnackScreen()
+
+  # Set the help line
+  credwin.pushHelpLine(helpline)
+  
+  # Get user entries
+  ew = snack.EntryWindow(credwin, title, inptext,
+                         [
+                           ('Description:', curcreds[0]),
+                           ('Tenant:', curcreds[1]),
+                           ('Username:', curcreds[2]),
+                           ('API Key:', curcreds[3]),
+                         ],
+                         buttons = (("ok", "ok"), ("quit", "quit")),
+                         entryWidth = 50)
+
+  credwin.finish()
+
+  # First array entry is the button, 2nd is a tuple of values
+  status = ew[0]
+  values = ew[1]
+
+  # return the values if ok, 'quit' on quit
+  if status == "ok":
+    return values
+  else:
+    return status
+
+
 ##########################################################
 # Display all of the credentials and return the selected
 ##########################################################
@@ -221,15 +280,21 @@ def mainCredentialsScreenLoop(help_text, selected_creds):
   # call mainScreen
   while True:
 
-    # Print the main screen
+    # Print the main cred screen
+    ################################
     mcsrun = mainCredentialsScreen(help_text)
 
+
+    # Select Credential
+    ###################
     if mcsrun == 'credential_select':
       selected_creds = selectCredential(help_text, "Select Active Credential")
       help_text = "Active Cred: %s" % selected_creds[0]
 
 
 
+    # Delete Credential
+    ###################
     if mcsrun == 'credential_delete':
       help_text = "Active Cred: %s" % selected_creds[0]
       del_creds = selectCredential(help_text, "Select Credential to Delete")
@@ -245,7 +310,8 @@ def mainCredentialsScreenLoop(help_text, selected_creds):
       
 
 
-
+    # Add Credential
+    ################
     if mcsrun == 'credential_add':
       # get the user input
       formvals = createCredentialsForm(help_text, 
@@ -267,7 +333,37 @@ def mainCredentialsScreenLoop(help_text, selected_creds):
         help_text = "Active Cred: %s" % created_creds[0]
 
 
+    # Edit Credential 
+    ##################
+    if mcsrun == 'credential_edit':
+ 
+      # Select one to edit
+      help_text = "Active Cred: %s" % selected_creds[0]
+      old_creds = selectCredential(help_text, "Select Credential to Edit")
 
+      # get the user input
+      formvals = editCredentialsForm(help_text, 
+                                        "Edit Credential",
+                                        "Edit Cloud Credential Information",
+                                        old_creds)
+
+
+      if formvals != "quit":
+
+
+        # convert the array to a tuple used for the rest of the application
+        edited_creds = (formvals[0], formvals[1], formvals[2], formvals[3])  
+
+        # add it to the keyring
+        editKeyRingEntries(old_creds, edited_creds)
+
+        # Set the active if thats the one edited 
+        if old_creds[0] == selected_creds[0]:
+          selected_creds = edited_creds
+          help_text = "Active Cred: %s" % edited_creds[0]
+
+
+    # Return to the main menu with the results of cred actions
     if mcsrun == 'quit':
       return selected_creds 
 
