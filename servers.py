@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 # Import external modules 
+import time
 import snack
 import pyrax
 import keyring
@@ -34,8 +35,24 @@ def createServerForm(helpline, title, myservers, myimages, myflavors, mykeypairs
   for flavor in myflavors:
     flavorlb.append(flavor.name,flavor.id)
 
+  # Select any public keys attache to the server's root
+  keypairtb = snack.Textbox(13,1,"Keypair: ",scroll=0,wrap=0) 
+  keypairlb = snack.Listbox(height = 3, width = 50, returnExit = 0)
+  for keypair in mykeypairs:
+    keypairlb.append(keypair.name, keypair.name)
+
+  # Select networks to attach to the server
+  networktb = snack.Textbox(13,1,"Networks: ",scroll=0,wrap=0) 
+  networkcbt = snack.CheckboxTree(height = 3, scroll = 0)
+  for network in mynetworks:
+    if network.name == 'private' or network.name == 'public':
+      networkcbt.append(network.name, network, selected = 1)
+    else:
+      networkcbt.append(network.name, network, selected = 0)
   
-  bb = snack.ButtonBar(newsrvwin, (("Ok", "ok"), ("Quit", "quit")))
+
+  
+  bb = snack.ButtonBar(newsrvwin, (("Add", "add"), ("Cancel", "cancel")))
 
   g = snack.GridForm(newsrvwin, title, 2, 10)
 
@@ -51,15 +68,30 @@ def createServerForm(helpline, title, myservers, myimages, myflavors, mykeypairs
   g.add(flavortb, 0, 2, padding=(0,1,0,1))
   g.add(flavorlb, 1, 2, padding=(0,1,0,1))
 
-  g.add(bb, 0, 3, growx = 1)
+  # keypair entry row
+  g.add(keypairtb, 0, 3, padding=(0,1,0,1))
+  g.add(keypairlb, 1, 3, padding=(0,1,0,1))
+
+  # network entry row
+  g.add(networktb, 0, 4, padding=(0,1,0,1))
+  g.add(networkcbt, 1, 4, padding=(0,1,0,1))
+
+  g.add(bb, 0, 5, growx = 1)
 
   result = g.runOnce()
 
-
   newsrvwin.finish()
 
-  if bb.buttonPressed(result) == "ok":
-    return namee
+  if bb.buttonPressed(result) == "add":
+    # Create a dict to return
+    retval = {
+      'servername': namee.value(),
+      'imageid': imagelb.current(), 
+      'flavorid': flavorlb.current(), 
+      'keypairname': keypairlb.current(),
+      'networklist': networkcbt.getSelection(),
+    }
+    return retval
   else:
     return  bb.buttonPressed(result)
 
@@ -134,14 +166,104 @@ def mainServersScreen(helpline):
     return  bb.buttonPressed(result)
 
 
+#########################################
+# Add a New Server and Display Results
+#########################################
+def addServer(help_text, title, srvobj, svals):
+
+  # Start the informational gui
+  infowin = snack.SnackScreen()
+
+  # Set the help line
+  infowin.pushHelpLine(help_text)
+
+  # Create an object to throw the text in
+  tb = snack.Textbox(80, 20, "", scroll = 0, wrap = 1)
+
+  g = snack.GridForm(infowin, title, 1, 10)
+  g.add(tb, 0, 0)
+  g.draw()
+
+  text = "Adding Server..."
+  tb.setText(text)
+  infowin.refresh()
+
+  net_list = []
+  for network in svals['networklist']:
+    net_list.append({'net-id': network.id})
+
+  server = srvobj.servers.create(svals['servername'], 
+                                 svals['imageid'],
+                                 svals['flavorid'],
+                                 key_name=svals['keypairname'],
+                                 nics=net_list 
+                                 )
+
+  text += "\nServer ID: %s" % server.id
+  text += "\nAdmin Pass: %s" % server.adminPass
+  text += "\nServer Status: %s" % server.status
+  text += "\nNetworks: %s" % server.networks
+  tb.setText(text)
+  infowin.refresh()
+
+  text += "\nWaiting on build to complete..."
+  text += "\nGet some coffee.  This could take a while..."
+  tb.setText(text)
+  infowin.refresh()
+
+  new_srv = pyrax.utils.wait_until(server, "status", ["ACTIVE", "ERROR"])
+  text += "\nBuild Complete:"
+  text += "\n  Server ID: %s" % new_srv.id
+  text += "\n  Admin Pass: %s" % server.adminPass
+  text += "\n  Server Status: %s" % new_srv.status
+  text += "\n  Networks: %s" % new_srv.networks
+  tb.setText(text)
+  infowin.refresh()
+
+  # Add a continue button
+  bb = snack.ButtonBar(infowin, ("Continue", "continue"))
+  g.add(bb, 0, 1)
+  g.draw()
+  infowin.refresh()
+  g.runOnce()
+
+  infowin.finish()
+
+
+
+
+# nic_list = [{'net-id':'00000000-0000-0000-0000-000000000000'},{'net-id':'11111111-1111-1111-1111-111111111111'},{'net-id':network_id}]
+#{'servername': 'test', 'flavorid': u'2', 'networklist': [<CloudNetwork id=00000000-0000-0000-0000-000000000000, label=public>, <CloudNetwork id=11111111-1111-1111-1111-111111111111, label=private>], 'keypairlist': [<Keypair: home-laptop>, <Keypair: my_key>], 'imageid': u'64be157e-13c1-4b83-a806-564b6f20f30b'}
+
+
+
 
 #######################################
 # Main loop for the servers menus  
 #######################################
 def mainServersScreenLoop(help_text, selected_creds, curregion):
 
+  ###################################################
+  # Throw up a information window while loading data
+  ###################################################
+
+  # Start the informational gui
+  infowin = snack.SnackScreen()
+
+  # Set the help line
+  infowin.pushHelpLine(help_text)
+
+  # Create an object to throw the text in
+  tb = snack.Textbox(40, 10, "", scroll = 0, wrap = 0)
+
+  g = snack.GridForm(infowin, "Loading Server Data", 1, 10)
+  g.add(tb, 0, 0)
+  g.draw()
+
   # Set up pyrax to prepare for server actions
-  print "Setting up Cloud Session..."
+  text = "Setting up Cloud Session..."
+  tb.setText(text)
+  infowin.refresh()
   pyrax.set_setting("identity_type", "rackspace")
   pyrax.set_setting("region", "ORD")
   cur_session = pyrax.create_context(
@@ -154,19 +276,38 @@ def mainServersScreenLoop(help_text, selected_creds, curregion):
   netobj = cur_session.get_client("network", curregion)
 
   # Start pulling some values to assist
-  print "Pulling Server Objects..."
+  text +=  "\nPulling Server Objects..."
+  tb.setText(text)
+  infowin.refresh()
   myservers = srvobj.list()
-  print "Pulling Image Objects..."
+
+  text += "\nPulling Image Objects..."
+  tb.setText(text)
+  infowin.refresh()
   myimages = srvobj.images.list()
-  print "Pulling Flavor Objects..."
+
+  text += "\nPulling Flavor Objects..."
+  tb.setText(text)
+  infowin.refresh()
   myflavors = srvobj.flavors.list()
-  print "Pulling Keypairs..."
+
+  text += "\nPulling Keypairs..."
+  tb.setText(text)
+  infowin.refresh()
   mykeypairs = srvobj.keypairs.list()
-  print "Pulling Networks..."
+
+  text += "\nPulling Networks..."
+  tb.setText(text)
+  infowin.refresh()
   mynetworks = netobj.list()
 
+  infowin.finish()
 
-  # call mainScreen
+
+
+  ###################################
+  # Run the main server screen loop
+  ###################################
   while True:
 
     # Print the main servers screen
@@ -180,7 +321,16 @@ def mainServersScreenLoop(help_text, selected_creds, curregion):
 
     # Add a new server to the active datacenter 
     if mcsrun == "server_add":
-      createServerForm(help_text, "New Cloud Server for %s" % curregion, myservers, myimages, myflavors, mykeypairs, mynetworks) 
+      formvals = createServerForm(help_text, "New Cloud Server for %s" % curregion, myservers, myimages, myflavors, mykeypairs, mynetworks) 
+
+      if formvals != 'cancel':
+        print formvals
+        addServer(help_text, "Adding New Cloud Server %s" % formvals['servername'], srvobj, formvals) 
+
+
+
+
+
     # Return to the main menu with the results of cred actions
     if mcsrun == 'quit':
       return 
