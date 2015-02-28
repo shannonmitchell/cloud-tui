@@ -274,7 +274,7 @@ def mainCredentialsScreen(helpline):
 #######################################
 # Main loop for the credentials menus  
 #######################################
-def mainCredentialsScreenLoop(help_text, selected_creds):
+def mainCredentialsScreenLoop(help_text, selected_creds, curregion):
 
 
   # call mainScreen
@@ -288,20 +288,25 @@ def mainCredentialsScreenLoop(help_text, selected_creds):
     # Select Credential
     ###################
     if mcsrun == 'credential_select':
-      selected_creds = selectCredential(help_text, "Select Active Credential")
-      help_text = "Active Cred: %s" % selected_creds[0]
+      curselected_creds = selectCredential(help_text, "Select Active Credential")
+
+      if curselected_creds != "quit":
+        selected_cred = curselected_creds
+        help_text = "(%s) %s" % (curregion, selected_creds[0])
 
 
 
     # Delete Credential
     ###################
     if mcsrun == 'credential_delete':
-      help_text = "Active Cred: %s" % selected_creds[0]
+      help_text = "(%s) %s" % (curregion, selected_creds[0])
       del_creds = selectCredential(help_text, "Select Credential to Delete")
 
       # Not a good idea to delete the active credential
       while del_creds[0] == selected_creds[0] and del_creds != "quit":
-        help_text = "Active Cred: %s  !!!! Can't delete the active cred !!!!" % del_creds[0]
+        help_text = "(%s) %s  !!!! Can't delete the active cred !!!!" % (
+                                                                curregion,
+                                                                curregiondel_creds[0])
         del_creds = selectCredential(help_text, "Select Credential to Delete")
 
       # Delete the current selected cred
@@ -330,7 +335,7 @@ def mainCredentialsScreenLoop(help_text, selected_creds):
         # set the selected_creds so that the newly created one will be the
         # active one on menu exit.
         selected_creds = created_creds
-        help_text = "Active Cred: %s" % created_creds[0]
+        help_text = "(%s) %s" % (curregion, created_creds[0])
 
 
     # Edit Credential 
@@ -338,7 +343,7 @@ def mainCredentialsScreenLoop(help_text, selected_creds):
     if mcsrun == 'credential_edit':
  
       # Select one to edit
-      help_text = "Active Cred: %s" % selected_creds[0]
+      help_text = "(%s) %s" % (curregion, selected_creds[0])
       old_creds = selectCredential(help_text, "Select Credential to Edit")
 
       # get the user input
@@ -360,7 +365,7 @@ def mainCredentialsScreenLoop(help_text, selected_creds):
         # Set the active if thats the one edited 
         if old_creds[0] == selected_creds[0]:
           selected_creds = edited_creds
-          help_text = "Active Cred: %s" % edited_creds[0]
+          help_text = "(%s) %s" % (curregion, edited_creds[0])
 
 
     # Return to the main menu with the results of cred actions

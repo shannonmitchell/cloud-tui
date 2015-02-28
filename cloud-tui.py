@@ -55,7 +55,10 @@ def mainScreen(helpline):
 
 def main():
 
-  # Set the default help text
+  # Set the default region to work out of
+  default_region = "DFW"
+
+  # Set the default help text. Ended up using an array to put diffent notifications
   help_text = " "
 
   # keep track of the returned active cred tuple
@@ -74,7 +77,7 @@ def main():
   else:
     # Set the default as the active cred
     active_cred_tup = keyentries[0]
-    help_text = "Active Cred: %s" % active_cred_tup[0]
+    help_text = "(%s) %s" % (default_region, active_cred_tup[0])
     
 
 
@@ -88,11 +91,11 @@ def main():
     if msrun == 'credentials':
 
       # Jump to the main credentials submenu
-      credtup = credentials.mainCredentialsScreenLoop(help_text, active_cred_tup)
+      credtup = credentials.mainCredentialsScreenLoop(help_text, active_cred_tup, default_region)
 
       # update the active_cred_tup and set the help text
       active_cred_tup = credtup
-      help_text = "Active Cred: %s" % active_cred_tup[0]
+      help_text = "(%s) %s" % (default_region, active_cred_tup[0])
 
     if msrun == 'quit':
       sys.exit()
