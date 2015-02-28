@@ -6,7 +6,9 @@ import sys
 import time
 import pyrax
 import snack
+import region
 import keyring
+import servers
 import warnings
 import credentials 
 
@@ -32,6 +34,7 @@ def mainScreen(helpline):
   li.append("n - Cloud Networks", "cloud_networks")
   li.append("l - Cloud Load Balancers", "cloud_load_balancer")
   li.append("c - Manage Credentials", "credentials") 
+  li.append("r - Change Default Region", "change_active_region") 
 
   bb = snack.ButtonBar(mainwin, (("(o)k", "ok", 'o'), ("(q)uit", "quit", 'q')))
 
@@ -57,6 +60,7 @@ def main():
 
   # Set the default region to work out of
   default_region = "DFW"
+
 
   # Set the default help text. Ended up using an array to put diffent notifications
   help_text = " "
@@ -96,6 +100,20 @@ def main():
       # update the active_cred_tup and set the help text
       active_cred_tup = credtup
       help_text = "(%s) %s" % (default_region, active_cred_tup[0])
+
+    if msrun == 'change_active_region':
+    
+      # Jump to the region select screen
+      newregion = region.regionSelectScreen(help_text, active_cred_tup, default_region)
+      if newregion != "quit":
+        default_region = newregion
+        help_text = "(%s) %s" % (default_region, active_cred_tup[0])
+
+
+    if msrun == 'cloud_servers':
+      servers.mainServersScreenLoop(help_text, active_cred_tup, default_region)
+
+
 
     if msrun == 'quit':
       sys.exit()
