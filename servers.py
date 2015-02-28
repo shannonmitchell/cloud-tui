@@ -10,31 +10,58 @@ import keyring
 #######################################################
 # Snack form to get credential info from a user
 #######################################################
-def createServerForm(helpline, title, inptext):
+def createServerForm(helpline, title, myservers, myimages, myflavors, mykeypairs, mynetworks): 
 
   # Set up the main screen 
-  credwin = snack.SnackScreen()
+  newsrvwin = snack.SnackScreen()
 
   # Set the help line
-  credwin.pushHelpLine(helpline)
+  newsrvwin.pushHelpLine(helpline)
   
   # Get user entries
-  ew = snack.EntryWindow(credwin, title, inptext,
-                         ['Description:', 'Tenant:', 'Username:', 'API Key:'],
-                         buttons = (("ok", "ok"), ("quit", "quit")),
-                         entryWidth = 50)
+  nametb = snack.Textbox(13,1,"Server Name: ",scroll=0,wrap=0) 
+  namee = snack.Entry(50, text="", hidden = 0, password = 0, scroll = 1, returnExit = 0)
 
-  credwin.finish()
+  # Allow Image Selection
+  imagetb = snack.Textbox(13,1,"Image: ",scroll=0,wrap=0) 
+  imagelb = snack.Listbox(height = 3, width = 50, returnExit = 0)
+  for image in myimages:
+    imagelb.append(image.name,image.id)
 
-  # First array entry is the button, 2nd is a tuple of values
-  status = ew[0]
-  values = ew[1]
+  # Allow Flavor Selection
+  flavortb = snack.Textbox(13,1,"Flavor: ",scroll=0,wrap=0) 
+  flavorlb = snack.Listbox(height = 3, width = 50, returnExit = 0)
+  for flavor in myflavors:
+    flavorlb.append(flavor.name,flavor.id)
 
-  # return the values if ok, 'quit' on quit
-  if status == "ok":
-    return values
+  
+  bb = snack.ButtonBar(newsrvwin, (("Ok", "ok"), ("Quit", "quit")))
+
+  g = snack.GridForm(newsrvwin, title, 2, 10)
+
+  # name entry row
+  g.add(nametb, 0, 0)
+  g.add(namee, 1, 0)
+
+  # image entry row
+  g.add(imagetb, 0, 1, padding=(0,1,0,1))
+  g.add(imagelb, 1, 1, padding=(0,1,0,1))
+
+  # flavor entry row
+  g.add(flavortb, 0, 2, padding=(0,1,0,1))
+  g.add(flavorlb, 1, 2, padding=(0,1,0,1))
+
+  g.add(bb, 0, 3, growx = 1)
+
+  result = g.runOnce()
+
+
+  newsrvwin.finish()
+
+  if bb.buttonPressed(result) == "ok":
+    return namee
   else:
-    return status
+    return  bb.buttonPressed(result)
 
 
 ##########################################################
@@ -151,6 +178,9 @@ def mainServersScreenLoop(help_text, selected_creds, curregion):
     if mcsrun == "server_list":
       listServers(help_text, "Server List for %s" % curregion, myservers)
 
+    # Add a new server to the active datacenter 
+    if mcsrun == "server_add":
+      createServerForm(help_text, "New Cloud Server for %s" % curregion, myservers, myimages, myflavors, mykeypairs, mynetworks) 
     # Return to the main menu with the results of cred actions
     if mcsrun == 'quit':
       return 
