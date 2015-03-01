@@ -180,8 +180,10 @@ def addServer(help_text, title, srvobj, svals):
   # Create an object to throw the text in
   tb = snack.Textbox(80, 20, "", scroll = 0, wrap = 1)
 
-  g = snack.GridForm(infowin, title, 1, 10)
+  g = snack.GridForm(infowin, title, 1, 2)
+  bb = snack.Button("Continue")
   g.add(tb, 0, 0)
+  g.add(bb, 0, 1)
   g.draw()
 
   text = "Adding Server..."
@@ -221,10 +223,6 @@ def addServer(help_text, title, srvobj, svals):
   infowin.refresh()
 
   # Add a continue button
-  bb = snack.ButtonBar(infowin, ("Continue", "continue"))
-  g.add(bb, 0, 1)
-  g.draw()
-  infowin.refresh()
   g.runOnce()
 
   infowin.finish()
