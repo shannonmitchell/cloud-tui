@@ -9,7 +9,7 @@ import keyring
 
 
 #######################################################
-# Snack form to get credential info from a user
+# Snack form to get server info from a user
 #######################################################
 def createServerForm(helpline, title, myservers, myimages, myflavors, mykeypairs, mynetworks): 
 
@@ -97,7 +97,92 @@ def createServerForm(helpline, title, myservers, myimages, myflavors, mykeypairs
 
 
 ##########################################################
-# Display all of the credentials and return the selected
+# Select then delete a server
+##########################################################
+def deleteServer(helpline, title, servers, srvobj):
+
+  # Set up the main screen 
+  mainlswin = snack.SnackScreen()
+
+  # Set the help line
+  mainlswin.pushHelpLine(helpline)
+  
+
+  li = snack.Listbox(height = 10, width = 80, returnExit = 0)
+  for server in servers:
+    full = "<%s>: %s" % (server.id, server.name)
+    li.append(full,server.id)
+
+  bb = snack.ButtonBar(mainlswin, (("(o)k", "ok", 'o'), ("(q)uit", "quit", 'q')))
+
+  g = snack.GridForm(mainlswin, title, 1, 4)
+  g.add(li, 0, 0)
+  g.add(bb, 0, 3, growx = 1)
+
+  result = g.runOnce()
+
+  mainlswin.finish()
+
+  if bb.buttonPressed(result) == "ok":
+    # Ask if they really want to delete this one.
+    deleteid = li.current()
+    delobj =  0
+    for server in servers:
+      if server.id == deleteid:
+        delobj = server
+    mainlswin = snack.SnackScreen()
+    mainlswin.pushHelpLine(helpline)
+    question = snack.ButtonChoiceWindow(mainlswin, 
+                            "Are you Sure?", 
+                            "%s: %s" % (delobj.name, delobj.id), 
+                            buttons = ['Delete', 'No!!! Keep it'], 
+                            width = 60, x = None, y = None, help = None)
+    mainlswin.finish()
+
+    # if the delete button was pushed do the needful
+    if 'delete' in question:
+
+      # Make a quick display to show the user we are
+      # updating the server list
+      infowin = snack.SnackScreen()
+      infowin.pushHelpLine(helpline)
+      tb = snack.Textbox(40, 10, "", scroll = 0, wrap = 0)
+      g = snack.GridForm(infowin, "Waiting for server to delete", 1, 10)
+      g.add(tb, 0, 0)
+      g.draw()
+
+      # Put real delete after the draw to reduce flash
+      delobj.delete()
+
+      while True:
+        text = "\nRefreshing Server Objects..."
+        tb.setText(text)
+        infowin.refresh()
+        myservers = srvobj.list()
+        found = 0
+        for server in myservers:
+          if server.id == delobj.id:
+            found = 1
+            text += "\nServer still exists..."
+            tb.setText(text)
+            infowin.refresh()
+
+        if found == 1:
+          text += "\nSleeping 20 seconds..."
+          tb.setText(text)
+          infowin.refresh()
+          time.sleep(20)
+        else:
+          break
+          
+      infowin.finish()
+
+  else:
+    return  bb.buttonPressed(result)
+
+
+##########################################################
+# Display all of the servers and return the selected
 ##########################################################
 def listServers(helpline, title, servers):
 
@@ -130,40 +215,6 @@ def listServers(helpline, title, servers):
     return  bb.buttonPressed(result)
 
 
-
-#########################################
-# Display the primary credentials screen
-#########################################
-def mainServersScreen(helpline):
-
-
-  # Set up the main screen 
-  mainsrvwin = snack.SnackScreen()
-
-  # Set the help line
-  mainsrvwin.pushHelpLine(helpline)
-  
-
-  li = snack.Listbox(height = 10, width = 40, returnExit = 0)
-  li.append("l - List Servers", "server_list")
-  li.append("a - Add Server", "server_add")
-  li.append("d - Delete Server", "server_del")
-
-  bb = snack.ButtonBar(mainsrvwin, (("(o)k", "ok", 'o'), ("(q)uit", "quit", 'q')))
-
-  g = snack.GridForm(mainsrvwin, "Cloud Servers", 1, 4)
-  g.add(li, 0, 0)
-  g.add(bb, 0, 3, growx = 1)
-
-
-  result = g.runOnce()
-
-  mainsrvwin.finish()
-
-  if bb.buttonPressed(result) == "ok":
-    return li.current()
-  else:
-    return  bb.buttonPressed(result)
 
 
 #########################################
@@ -230,10 +281,40 @@ def addServer(help_text, title, srvobj, svals):
 
 
 
-# nic_list = [{'net-id':'00000000-0000-0000-0000-000000000000'},{'net-id':'11111111-1111-1111-1111-111111111111'},{'net-id':network_id}]
-#{'servername': 'test', 'flavorid': u'2', 'networklist': [<CloudNetwork id=00000000-0000-0000-0000-000000000000, label=public>, <CloudNetwork id=11111111-1111-1111-1111-111111111111, label=private>], 'keypairlist': [<Keypair: home-laptop>, <Keypair: my_key>], 'imageid': u'64be157e-13c1-4b83-a806-564b6f20f30b'}
+
+#########################################
+# Display the primary server screen
+#########################################
+def mainServersScreen(helpline):
 
 
+  # Set up the main screen 
+  mainsrvwin = snack.SnackScreen()
+
+  # Set the help line
+  mainsrvwin.pushHelpLine(helpline)
+  
+
+  li = snack.Listbox(height = 10, width = 40, returnExit = 0)
+  li.append("l - List Servers", "server_list")
+  li.append("a - Add Server", "server_add")
+  li.append("d - Delete Server", "server_del")
+
+  bb = snack.ButtonBar(mainsrvwin, (("(o)k", "ok", 'o'), ("(q)uit", "quit", 'q')))
+
+  g = snack.GridForm(mainsrvwin, "Cloud Servers", 1, 4)
+  g.add(li, 0, 0)
+  g.add(bb, 0, 3, growx = 1)
+
+
+  result = g.runOnce()
+
+  mainsrvwin.finish()
+
+  if bb.buttonPressed(result) == "ok":
+    return li.current()
+  else:
+    return  bb.buttonPressed(result)
 
 
 #######################################
@@ -317,19 +398,51 @@ def mainServersScreenLoop(help_text, selected_creds, curregion):
     if mcsrun == "server_list":
       listServers(help_text, "Server List for %s" % curregion, myservers)
 
+    # Delete a selected server.  This will take two actions.  
+    if mcsrun == "server_del":
+      retval = deleteServer(help_text, "Delete a server in %s" % curregion, myservers, srvobj)
+
+      if retval != "quit":
+        # Make a quick display to show the user we are
+        # updating the server list
+        infowin = snack.SnackScreen()
+        infowin.pushHelpLine(help_text)
+        tb = snack.Textbox(40, 10, "", scroll = 0, wrap = 0)
+        g = snack.GridForm(infowin, "Loading Server Data", 1, 10)
+        g.add(tb, 0, 0)
+        g.draw()
+        text = "\nRefreshing Server Objects..."
+        tb.setText(text)
+        infowin.refresh()
+        myservers = srvobj.list()
+        infowin.finish()
+
     # Add a new server to the active datacenter 
     if mcsrun == "server_add":
       formvals = createServerForm(help_text, "New Cloud Server for %s" % curregion, myservers, myimages, myflavors, mykeypairs, mynetworks) 
 
       if formvals != 'cancel':
-        print formvals
         addServer(help_text, "Adding New Cloud Server %s" % formvals['servername'], srvobj, formvals) 
 
+        # Make a quick display to show the user we are
+        # updating the server list
+        infowin = snack.SnackScreen()
+        infowin.pushHelpLine(help_text)
+        tb = snack.Textbox(40, 10, "", scroll = 0, wrap = 0)
+        g = snack.GridForm(infowin, "Loading Server Data", 1, 10)
+        g.add(tb, 0, 0)
+        g.draw()
+        text = "\nRefreshing Server Objects..."
+        tb.setText(text)
+        infowin.refresh()
+        myservers = srvobj.list()
+        infowin.finish()
 
 
 
 
-    # Return to the main menu with the results of cred actions
+
+    # Return to the main menu with the results of server actions
     if mcsrun == 'quit':
       return 
 
