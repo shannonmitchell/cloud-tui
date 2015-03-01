@@ -210,7 +210,50 @@ def listServers(helpline, title, servers):
   mainlswin.finish()
 
   if bb.buttonPressed(result) == "ok":
-    return li.current()
+    #return li.current()
+
+    dispsrv = 0
+    for server in servers:
+      if server.id == li.current():
+        dispsrv = server
+
+    # Make a quick display to show the user we are
+    # updating the server list
+    infowin = snack.SnackScreen()
+    infowin.pushHelpLine(helpline)
+    tb1_1 = snack.Textbox(10, 1, "Name: ", scroll = 0, wrap = 0)
+    tb1_2 = snack.Textbox(50, 1, dispsrv.name, scroll = 0, wrap = 0)
+
+    tb2_1 = snack.Textbox(10, 1, "ID: ", scroll = 0, wrap = 0)
+    tb2_2 = snack.Textbox(50, 1, dispsrv.id, scroll = 0, wrap = 0)
+
+    tb3_1 = snack.Textbox(10, 1, "Status: ", scroll = 0, wrap = 0)
+    tb3_2 = snack.Textbox(50, 1, dispsrv.status, scroll = 0, wrap = 0)
+
+    tb4_1 = snack.Textbox(10, 1, "Network: ", scroll = 0, wrap = 0)
+    ntext = ""
+    for network in dispsrv.networks:
+      for range in dispsrv.networks[network]:
+        if ntext != "":
+          ntext += "\n%s: %s" % (network, range)
+        else:
+          ntext += "%s: %s" % (network, range)
+
+    tb4_2 = snack.Textbox(50, 4, ntext, scroll = 0, wrap = 1)
+
+    g = snack.GridForm(infowin, "Server Info", 2, 5)
+    bb = snack.Button("Continue")
+    g.add(tb1_1, 0, 0, padding=(0,1,0,1))
+    g.add(tb1_2, 1, 0, padding=(0,1,0,1))
+    g.add(tb2_1, 0, 1, padding=(0,1,0,1))
+    g.add(tb2_2, 1, 1, padding=(0,1,0,1))
+    g.add(tb3_1, 0, 2, padding=(0,1,0,1))
+    g.add(tb3_2, 1, 2, padding=(0,1,0,1))
+    g.add(tb4_1, 0, 3, padding=(0,1,0,1))
+    g.add(tb4_2, 1, 3, padding=(0,1,0,1))
+    g.add(bb, 0, 4)
+    g.runOnce()
+    infowin.finish()
   else:
     return  bb.buttonPressed(result)
 
@@ -296,7 +339,7 @@ def mainServersScreen(helpline):
   
 
   li = snack.Listbox(height = 10, width = 40, returnExit = 0)
-  li.append("l - List Servers", "server_list")
+  li.append("l - Server List & Info", "server_list")
   li.append("a - Add Server", "server_add")
   li.append("d - Delete Server", "server_del")
 
@@ -396,7 +439,10 @@ def mainServersScreenLoop(help_text, selected_creds, curregion):
 
     # Simple list the servers for the active datacenter 
     if mcsrun == "server_list":
-      listServers(help_text, "Server List for %s" % curregion, myservers)
+      lsret = 'keepgoing'
+      # Keep looping so the user doesn't get kicked out on a info exit
+      while lsret != "quit":
+        lsret = listServers(help_text, "Server List for %s" % curregion, myservers)
 
     # Delete a selected server.  This will take two actions.  
     if mcsrun == "server_del":
