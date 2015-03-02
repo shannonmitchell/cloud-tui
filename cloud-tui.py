@@ -9,6 +9,7 @@ import snack
 import region
 import keyring
 import servers
+import networks
 import warnings
 import credentials 
 
@@ -112,6 +113,11 @@ def main():
 
     if msrun == 'cloud_servers':
       servers.mainServersScreenLoop(help_text, active_cred_tup, default_region)
+
+
+
+    if msrun == 'cloud_networks':
+      networks.mainNetworksScreenLoop(help_text, active_cred_tup, default_region)
 
 
 
